@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>∎ MARKET SCANNER</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060608;
+      --panel: #0b0c10;
+      --border: #181b22;
+      --green: #00e676;
+      --green-dim: #00994d;
+      --amber: #ffb300;
+      --blue: #4fc3f7;
+      --red: #ff5252;
+      --text: #9aa3b0;
+      --text-dim: #3d4451;
+      --text-bright: #eceff1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px);
+      pointer-events: none; z-index: 9999;
+    }
+
+    /* ── Header ── */
+    #header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 9px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .logo {
+      font-size: 13px; font-weight: 800; color: var(--green);
+      letter-spacing: 4px;
+      text-shadow: 0 0 12px rgba(0,230,118,0.35);
+    }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    #last-updated { font-size: 9px; color: var(--text-dim); }
+
+    /* ── Status bar ── */
+    #statusbar {
+      background: #08090c;
+      border-bottom: 1px solid var(--border);
+      padding: 5px 18px;
+      display: flex; gap: 20px;
+      font-size: 9px; letter-spacing: 1px; color: var(--text-dim);
+      flex-shrink: 0; overflow-x: auto;
+    }
+    #statusbar b { color: var(--text); font-weight: 400; }
+
+    /* ── Buttons ── */
+    button {
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+    }
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 4px 11px; font-size: 9px; letter-spacing: 1px;
+      transition: all 0.12s;
+    }
+    .btn:hover { border-color: var(--green); color: var(--green); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-green { border-color: var(--green-dim); color: var(--green); }
+    .btn-green:hover { background: rgba(0,230,118,0.08); }
+
+    /* ── Main layout ── */
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Watchlist panel ── */
+    #watchlist-panel {
+      width: 255px; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; flex-shrink: 0;
+    }
+    .panel-hdr {
+      padding: 7px 13px;
+      border-bottom: 1px solid var(--border);
+      font-size: 8px; letter-spacing: 3px; color: var(--text-dim);
+      display: flex; justify-content: space-between; align-items: center;
+      flex-shrink: 0;
+    }
+    #stock-list { overflow-y: auto; flex: 1; }
+    .stock-row {
+      padding: 9px 13px;
+      border-bottom: 1px solid #0d0e12;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: background 0.1s;
+    }
+    .stock-row:hover { background: #0d0e12; }
+    .stock-row.active { background: #0e1015; border-left-color: var(--green); }
+    .sr-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+    .sr-ticker { font-size: 13px; font-weight: 800; color: var(--text-bright); }
+    .sig-badge {
+      font-size: 7px; padding: 1px 5px; letter-spacing: 1px;
+      font-weight: 700; border-radius: 1px;
+    }
+    .sr-mid { display: flex; justify-content: space-between; font-size: 11px; }
+    .sr-price { color: var(--text-bright); }
+    .sr-bot { font-size: 8px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+
+    /* ── Detail panel ── */
+    #detail-panel { flex: 1; overflow-y: auto; padding: 16px 20px; }
+    #placeholder {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; color: var(--text-dim); gap: 10px;
+    }
+    .ph-icon { font-size: 40px; opacity: 0.15; }
+    .ph-text { font-size: 9px; letter-spacing: 4px; }
+
+    .detail-hdr {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 14px; padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .d-ticker { font-size: 22px; font-weight: 800; color: var(--text-bright); letter-spacing: 2px; }
+    .d-price { font-size: 20px; font-weight: 700; color: var(--text-bright); text-align: right; }
+    .d-chg { font-size: 12px; font-weight: 700; text-align: right; margin-top: 2px; }
+
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      padding: 11px 13px; margin-bottom: 10px;
+    }
+    .card:last-child { margin-bottom: 0; }
+    .card-title {
+      font-size: 7px; letter-spacing: 3px; color: var(--text-dim);
+      margin-bottom: 9px;
+    }
+    .dr {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 3px 0; border-bottom: 1px solid #0d0e12;
+      font-size: 10px;
+    }
+    .dr:last-child { border-bottom: none; }
+    .dl { color: var(--text-dim); }
+    .dv { font-weight: 700; }
+
+    /* RSI */
+    .rsi-wrap { margin-top: 8px; }
+    .rsi-labels { display: flex; justify-content: space-between; font-size: 8px; color: var(--text-dim); margin-bottom: 3px; }
+    .rsi-track { background: #101215; height: 5px; position: relative; }
+    .rsi-fill { height: 100%; transition: width 0.5s ease; }
+    .rsi-mark { position: absolute; top: -2px; height: calc(100% + 4px); width: 1px; background: var(--border); }
+
+    /* Sparkline */
+    .spark-wrap { height: 52px; margin: 6px 0 2px; }
+
+    /* Reasons */
+    .reason {
+      font-size: 10px; padding: 4px 0;
+      border-bottom: 1px solid #0d0e12;
+      color: var(--text); line-height: 1.5;
+    }
+    .reason:last-child { border-bottom: none; }
+    .reason::before { content: '›  '; color: var(--green); }
+
+    /* Verdict */
+    .verdict {
+      padding: 13px 15px; border-left: 3px solid;
+      margin-bottom: 10px;
+    }
+    .verdict-lbl { font-size: 7px; letter-spacing: 3px; margin-bottom: 7px; }
+    .verdict-txt { font-size: 11px; color: var(--text-bright); line-height: 1.85; }
+
+    /* Error */
+    .err-card {
+      background: rgba(255,82,82,0.04);
+      border: 1px solid rgba(255,82,82,0.18);
+      padding: 14px; color: #ff8a80; font-size: 11px; margin-bottom: 10px;
+    }
+
+    /* ── Setup Modal ── */
+    #setup-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.92);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    .modal-box {
+      background: var(--panel); border: 1px solid var(--border);
+      padding: 28px 32px; width: 460px; max-width: 92vw;
+    }
+    .modal-title {
+      font-size: 14px; font-weight: 800; color: var(--green);
+      letter-spacing: 3px; margin-bottom: 6px;
+    }
+    .modal-sub {
+      font-size: 10px; color: var(--text-dim);
+      line-height: 1.8; margin-bottom: 20px;
+    }
+    .modal-sub a { color: var(--text); }
+    .form-grp { margin-bottom: 14px; }
+    .form-lbl { display: block; font-size: 8px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 5px; }
+    .form-inp {
+      width: 100%; background: #07080a;
+      border: 1px solid var(--border); color: var(--text-bright);
+      padding: 7px 11px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; outline: none;
+    }
+    .form-inp:focus { border-color: var(--green-dim); }
+    textarea.form-inp { resize: vertical; min-height: 90px; line-height: 1.7; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    #setup-err { margin-top: 10px; font-size: 10px; color: var(--red); display: none; }
+
+    /* ── Loading ── */
+    #loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(6,6,8,0.96);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 150;
+    }
+    .ld-title { font-size: 10px; letter-spacing: 5px; color: var(--green); margin-bottom: 18px; }
+    .prog-track { width: 280px; height: 2px; background: var(--border); margin-bottom: 10px; }
+    .prog-fill { height: 100%; background: var(--green); transition: width 0.3s ease; }
+    .ld-status { font-size: 9px; color: var(--text-dim); }
+
+    .hidden { display: none !important; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .blink { animation: blink 1.1s infinite; }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+
+    /* Disclaimer */
+    .disclaimer {
+      font-size: 8px; color: #1a1e26; text-align: center;
+      padding: 5px; border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Setup Modal ── -->
+<div id="setup-modal">
+  <div class="modal-box">
+    <div class="modal-title">∎ MARKET SCANNER SETUP</div>
+    <div class="modal-sub">
+      Fetches end-of-day data via <a href="https://www.alphavantage.co/support/#api-key" target="_blank">Alpha Vantage</a> (free tier — 25 calls/day).<br>
+      Get a free API key at <strong style="color:var(--text)">alphavantage.co</strong> — takes 30 seconds.<br>
+      Your key is stored in your browser only — never sent anywhere else.
+    </div>
+
+    <div class="form-grp">
+      <label class="form-lbl">ALPHA VANTAGE API KEY</label>
+      <input id="av-key-input" class="form-inp" type="password" placeholder="Paste your API key..." autocomplete="off" />
+    </div>
+
+    <div class="form-grp">
+      <label class="form-lbl">WATCHLIST — one ticker per line (max 25 for free tier)</label>
+      <textarea id="wl-input" class="form-inp">NVDA
+PLTR
+AMD
+TSLA
+MSFT
+META
+AAPL
+AMZN
+GOOGL
+ADMA</textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-green" onclick="saveSetup()" style="flex:1;padding:9px;font-size:10px;">LAUNCH SCANNER ▶</button>
+    </div>
+    <div id="setup-err"></div>
+  </div>
+</div>
+
+<!-- ── Loading ── -->
+<div id="loading-overlay" class="hidden">
+  <div class="ld-title">FETCHING MARKET DATA <span class="blink">_</span></div>
+  <div class="prog-track">
+    <div class="prog-fill" id="prog-fill" style="width:0%"></div>
+  </div>
+  <div class="ld-status" id="ld-status">Initializing...</div>
+  <div style="margin-top:20px;font-size:9px;color:var(--text-dim);max-width:280px;text-align:center;line-height:1.7;">
+    Alpha Vantage free tier = 5 requests/min.<br>
+    Pausing 13s between stocks to avoid rate limits.
+  </div>
+</div>
+
+<!-- ── Header ── -->
+<div id="header">
+  <div class="logo">∎ MARKET SCANNER</div>
+  <div class="header-right">
+    <span id="last-updated"></span>
+    <button class="btn" onclick="openSettings()">⚙ SETTINGS</button>
+    <button class="btn btn-green" onclick="forceRefresh()" id="refresh-btn">↻ REFRESH</button>
+  </div>
+</div>
+
+<!-- ── Status Bar ── -->
+<div id="statusbar">
+  <span>DATE: <b id="sb-date">—</b></span>
+  <span>STOCKS: <b id="sb-count">0</b></span>
+  <span>BUY SIGNALS: <b id="sb-buys" style="color:var(--green)">0</b></span>
+  <span>ACCUMULATE: <b id="sb-acc" style="color:var(--blue)">0</b></span>
+  <span>WATCH: <b id="sb-watch" style="color:var(--amber)">0</b></span>
+  <span>SOURCE: <b id="sb-src">ALPHA VANTAGE EOD</b></span>
+</div>
+
+<!-- ── Main ── -->
+<div id="main">
+  <div id="watchlist-panel">
+    <div class="panel-hdr">
+      WATCHLIST
+      <button class="btn" onclick="openSettings()" style="font-size:8px;padding:2px 7px;">EDIT</button>
+    </div>
+    <div id="stock-list">
+      <div style="padding:18px 13px;color:var(--text-dim);font-size:10px;">Waiting for data...</div>
+    </div>
+  </div>
+
+  <div id="detail-panel">
+    <div id="placeholder">
+      <div class="ph-icon">▦</div>
+      <div class="ph-text">SELECT A STOCK TO ANALYZE</div>
+    </div>
+    <div id="detail-content" class="hidden"></div>
+  </div>
+</div>
+
+<div class="disclaimer">
+  NOT FINANCIAL ADVICE · EDUCATIONAL PURPOSES ONLY · DATA FROM ALPHA VANTAGE · PAST PERFORMANCE ≠ FUTURE RESULTS
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let apiKey = '';
+let watchlist = [];
+let results = {};   // ticker → analysis object
+let selectedTicker = null;
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+window.onload = () => {
+  apiKey = localStorage.getItem('av_key') || '';
+  const wl = localStorage.getItem('wl');
+  watchlist = wl ? JSON.parse(wl) : [];
+
+  if (apiKey && watchlist.length > 0) {
+    document.getElementById('setup-modal').classList.add('hidden');
+    loadAll(false);
+  }
+};
+
+// ══════════════════════════════════════════
+//  SETUP
+// ══════════════════════════════════════════
+function saveSetup() {
+  const key = document.getElementById('av-key-input').value.trim();
+  const wlText = document.getElementById('wl-input').value.trim();
+  if (!key) return showSetupErr('Please enter an API key');
+  if (!wlText) return showSetupErr('Enter at least one ticker');
+
+  apiKey = key;
+  watchlist = wlText.split('\n').map(t => t.trim().toUpperCase()).filter(Boolean).slice(0, 25);
+
+  localStorage.setItem('av_key', key);
+  localStorage.setItem('wl', JSON.stringify(watchlist));
+
+  document.getElementById('setup-modal').classList.add('hidden');
+  loadAll(false);
+}
+
+function showSetupErr(msg) {
+  const el = document.getElementById('setup-err');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+
+function openSettings() {
+  document.getElementById('av-key-input').value = apiKey;
+  document.getElementById('wl-input').value = watchlist.join('\n');
+  document.getElementById('setup-err').style.display = 'none';
+  document.getElementById('setup-modal').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+//  DATA LOADING
+// ══════════════════════════════════════════
+async function loadAll(force) {
+  const today = new Date().toDateString();
+  const overlay = document.getElementById('loading-overlay');
+  const progFill = document.getElementById('prog-fill');
+  const ldStatus = document.getElementById('ld-status');
+  const refreshBtn = document.getElementById('refresh-btn');
+
+  // Check if all cached for today
+  if (!force) {
+    let allGood = true;
+    for (const t of watchlist) {
+      if (!localStorage.getItem(`av_${t}_${today}`)) { allGood = false; break; }
+    }
+    if (allGood) {
+      for (const t of watchlist) {
+        try { results[t] = JSON.parse(localStorage.getItem(`av_${t}_${today}`)); } catch(e) {}
+      }
+      renderAll();
+      return;
+    }
+  }
+
+  overlay.classList.remove('hidden');
+  refreshBtn.disabled = true;
+
+  const total = watchlist.length;
+  let done = 0;
+
+  for (const ticker of watchlist) {
+    ldStatus.textContent = `Fetching ${ticker}... (${done + 1}/${total})`;
+    progFill.style.width = `${(done / total) * 100}%`;
+
+    try {
+      results[ticker] = await fetchOne(ticker, today);
+    } catch (e) {
+      results[ticker] = { ticker, error: e.message };
+    }
+    done++;
+
+    // Rate-limit pause (13s between calls to stay under 5/min)
+    if (done < total) {
+      for (let s = 13; s >= 1; s--) {
+        ldStatus.textContent = `Next: ${watchlist[done]} — waiting ${s}s (rate limit protection)`;
+        await sleep(1000);
+      }
+    }
+  }
+
+  progFill.style.width = '100%';
+  ldStatus.textContent = 'Complete!';
+  await sleep(500);
+
+  overlay.classList.add('hidden');
+  refreshBtn.disabled = false;
+  renderAll();
+}
+
+async function fetchOne(ticker, today) {
+  const cacheKey = `av_${ticker}_${today}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return JSON.parse(cached);
+
+  const avUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${ticker}&outputsize=compact&apikey=${apiKey}`;
+  // Use CORS proxy when running as a local file (file:// protocol)
+  const isLocal = location.protocol === 'file:';
+  const url = isLocal ? `https://corsproxy.io/?${encodeURIComponent(avUrl)}` : avUrl;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} — if this persists, try hosting the file on Netlify (free, 10 sec)`);
+  const raw = await resp.json();
+
+  if (raw['Note'] || (raw['Information'] && raw['Information'].includes('rate')))
+    throw new Error('API rate limit hit. Wait 1 min.');
+  if (raw['Error Message'])
+    throw new Error(`Invalid ticker "${ticker}"`);
+  if (!raw['Time Series (Daily)'])
+    throw new Error('No data returned');
+
+  const candles = parseTS(raw);
+  if (candles.length < 25) throw new Error('Not enough historical data');
+
+  const analysis = analyze(ticker, candles);
+  localStorage.setItem(cacheKey, JSON.stringify(analysis));
+  return analysis;
+}
+
+function forceRefresh() {
+  // Clear today's cache and reload
+  const today = new Date().toDateString();
+  for (const t of watchlist) localStorage.removeItem(`av_${t}_${today}`);
+  loadAll(true);
+}
+
+function parseTS(raw) {
+  const ts = raw['Time Series (Daily)'];
+  return Object.keys(ts).sort().reverse().map(d => ({
+    date: d,
+    open:   parseFloat(ts[d]['1. open']),
+    high:   parseFloat(ts[d]['2. high']),
+    low:    parseFloat(ts[d]['3. low']),
+    close:  parseFloat(ts[d]['4. close']),
+    volume: parseInt(ts[d]['5. volume']),
+  }));
+}
+
+// ══════════════════════════════════════════
+//  TECHNICAL ANALYSIS
+// ══════════════════════════════════════════
+function sma(arr, n) {
+  if (arr.length < n) return null;
+  return arr.slice(0, n).reduce((a, b) => a + b, 0) / n;
+}
+
+function calcRSI(closes, period = 14) {
+  if (closes.length < period + 1) return null;
+  const rev = [...closes].reverse();
+  let g = 0, l = 0;
+  for (let i = rev.length - period; i < rev.length; i++) {
+    const d = rev[i] - rev[i - 1];
+    if (d > 0) g += d; else l -= d;
+  }
+  const ag = g / period, al = l / period;
+  if (al === 0) return 100;
+  return parseFloat((100 - 100 / (1 + ag / al)).toFixed(1));
+}
+
+function bollingerBands(closes, period = 20) {
+  if (closes.length < period) return null;
+  const s = closes.slice(0, period);
+  const mean = s.reduce((a, b) => a + b, 0) / period;
+  const std = Math.sqrt(s.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period);
+  return { upper: mean + 2 * std, middle: mean, lower: mean - 2 * std };
+}
+
+function analyze(ticker, candles) {
+  const closes = candles.map(c => c.close);
+  const highs  = candles.map(c => c.high);
+  const lows   = candles.map(c => c.low);
+  const vols   = candles.map(c => c.volume);
+
+  const price = closes[0];
+  const rsiVal = calcRSI(closes);
+  const sma20  = sma(closes, 20);
+  const sma50  = sma(closes, 50);
+  const sma100 = sma(closes, 100); // proxy for 200 MA (compact = 100 bars)
+  const bb     = bollingerBands(closes);
+  const support30    = Math.min(...lows.slice(0, 30));
+  const resistance30 = Math.max(...highs.slice(0, 30));
+  const chg1d  = ((closes[0] - closes[1]) / closes[1]) * 100;
+  const chg5d  = closes.length > 5  ? ((closes[0] - closes[5])  / closes[5])  * 100 : 0;
+  const chg1m  = closes.length > 21 ? ((closes[0] - closes[21]) / closes[21]) * 100 : 0;
+  const avgVol10 = sma(vols, 10);
+  const volRatio = avgVol10 ? (vols[0] / avgVol10) : 1;
+
+  // ── Scoring ──
+  let score = 0;
+  const reasons = [];
+
+  if (rsiVal !== null) {
+    if (rsiVal < 28)      { score += 3; reasons.push(`RSI critically oversold (${rsiVal}) — historically strong reversal zone`); }
+    else if (rsiVal < 38) { score += 2; reasons.push(`RSI oversold (${rsiVal}) — approaching mean-reversion zone`); }
+    else if (rsiVal < 50) { score += 1; reasons.push(`RSI neutral-low (${rsiVal}) — room to run, not extended`); }
+    else if (rsiVal > 76) { score -= 2; reasons.push(`RSI overbought (${rsiVal}) — extended, chasing risk`); }
+    else if (rsiVal > 66) { score -= 1; reasons.push(`RSI elevated (${rsiVal}) — reduced upside near-term`); }
+  }
+
+  if (sma50 && sma100) {
+    if (sma50 > sma100) { score += 2; reasons.push('Golden cross: 50 MA > 100 MA — confirmed bullish regime'); }
+    else                { score -= 1; reasons.push('Death cross: 50 MA < 100 MA — bearish trend structure'); }
+  }
+
+  if (sma50) {
+    if (price > sma50 * 1.005) { score += 1; reasons.push('Price above 50-day MA — bullish trend intact'); }
+    else if (price < sma50 * 0.97) { score -= 1; reasons.push('Price well below 50 MA (-3%+) — trend broken'); }
+  }
+
+  if (sma100 && Math.abs(price - sma100) / sma100 < 0.025)
+    { score += 1; reasons.push('Price at 100-day MA support zone (within ±2.5%)'); }
+
+  if (chg5d > 3 && rsiVal && rsiVal < 63)
+    { score += 1; reasons.push('5-day momentum positive (+3%+), RSI not extended'); }
+  else if (chg5d < -7)
+    { score -= 1; reasons.push('5-day momentum deeply negative (-7%+)'); }
+
+  if (bb) {
+    const width = (bb.upper - bb.lower) / bb.middle;
+    if (width < 0.065) { score += 1; reasons.push(`Bollinger squeeze (${(width*100).toFixed(1)}% width) — breakout setup imminent`); }
+    if (price <= bb.lower * 1.005) { score += 1; reasons.push('Price at/below lower Bollinger band — mean-reversion setup'); }
+    if (price >= bb.upper * 0.995) { score -= 1; reasons.push('Price at/above upper Bollinger band — overextended'); }
+  }
+
+  if (volRatio > 1.6 && chg1d > 0)
+    { score += 1; reasons.push(`Volume surge (${volRatio.toFixed(1)}× avg) on up day — institutional accumulation signal`); }
+
+  // ── Signal ──
+  let signal, sigColor, sigBg;
+  if      (score >= 7) { signal = 'STRONG BUY'; sigColor = '#00e676'; sigBg = 'rgba(0,230,118,0.1)'; }
+  else if (score >= 4) { signal = 'BUY';         sigColor = '#00cc66'; sigBg = 'rgba(0,204,102,0.09)'; }
+  else if (score >= 2) { signal = 'ACCUMULATE';  sigColor = '#4fc3f7'; sigBg = 'rgba(79,195,247,0.08)'; }
+  else if (score >= 0) { signal = 'WATCH';        sigColor = '#ffb300'; sigBg = 'rgba(255,179,0,0.07)'; }
+  else                 { signal = 'AVOID';         sigColor = '#ff5252'; sigBg = 'rgba(255,82,82,0.07)'; }
+
+  // ── Entry/Exit Levels ──
+  const entryLow  = bb ? bb.lower : support30 * 1.01;
+  const entryHigh = sma20 ? Math.min(sma20, price * 1.01) : price * 1.005;
+  const stopPrice = (support30 * 0.966).toFixed(2);
+  const target1   = (resistance30 * 0.975).toFixed(2);
+  const target2   = (price + (resistance30 - price) * 1.3).toFixed(2);
+  const rrRaw     = (parseFloat(target1) - price) / (price - parseFloat(stopPrice));
+  const rr        = isNaN(rrRaw) || rrRaw < 0 ? 'N/A' : rrRaw.toFixed(1) + ':1';
+  const entryZone = `$${entryLow.toFixed(2)} – $${entryHigh.toFixed(2)}`;
+
+  // ── Pattern ──
+  let pattern = 'Consolidating';
+  if (rsiVal && rsiVal < 35 && chg5d < -4)
+    pattern = 'Oversold Pullback — Reversal Watch';
+  else if (sma50 && sma100 && sma50 > sma100 && price > sma50 && chg5d > 0)
+    pattern = 'Bullish Trend Continuation';
+  else if (sma50 && sma100 && sma50 < sma100 && price < sma50)
+    pattern = 'Downtrend — Avoid Until Reversal';
+  else if (bb && (bb.upper - bb.lower) / bb.middle < 0.065)
+    pattern = 'Bollinger Squeeze — Breakout Imminent';
+  else if (sma100 && Math.abs(price - sma100) / sma100 < 0.025)
+    pattern = '100 MA Support Test';
+  else if (chg1m < -13 && rsiVal && rsiVal < 45)
+    pattern = 'Deep Correction — Accumulation Zone';
+  else if (chg5d > 4 && rsiVal && rsiVal < 60)
+    pattern = 'Momentum Breakout Setup';
+  else if (chg1d > 3 && volRatio > 1.5)
+    pattern = 'High-Volume Breakout Day';
+
+  // ── Verdict ──
+  let verdict;
+  if (score >= 4)
+    verdict = `${reasons.length} bullish signals aligned. Entry zone ${entryZone} offers an attractive risk/reward setup. Stop below $${stopPrice} caps downside to ~${((price - parseFloat(stopPrice))/price*100).toFixed(1)}% from entry. Target 1: $${target1} (${((parseFloat(target1)-price)/price*100).toFixed(1)}% upside).`;
+  else if (score >= 2)
+    verdict = `Moderate setup — look for confirmation before full entry. A small starter in ${entryZone} is reasonable; add more on a volume-confirmed break above the 50 MA. Stop at $${stopPrice}.`;
+  else if (score >= 0)
+    verdict = `No clear entry signal. Add to watchlist and monitor for RSI reset below 40 and volume confirmation. Forcing an entry here offers poor risk/reward.`;
+  else
+    verdict = `Multiple bearish signals — avoid. The trend structure is broken (${reasons.filter(r=>r.includes('Death')||r.includes('below')).join('; ')}). Wait for a proper base to form before considering entry.`;
+
+  return {
+    ticker, signal, sigColor, sigBg, score,
+    price, chg1d, chg5d, chg1m,
+    rsiVal, sma20, sma50, sma100, bb,
+    support30, resistance30,
+    entryZone, stopPrice, target1, target2, rr,
+    pattern, reasons, verdict,
+    volRatio, avgVol10,
+    lastDate: candles[0].date,
+    closes: closes.slice(0, 35),
+  };
+}
+
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
+function renderAll() {
+  renderStatusBar();
+  renderWatchlist();
+  if (selectedTicker && results[selectedTicker]) renderDetail(selectedTicker);
+
+  document.getElementById('last-updated').textContent =
+    'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function renderStatusBar() {
+  const tickers = Object.keys(results);
+  const valid = tickers.filter(t => !results[t].error);
+  document.getElementById('sb-date').textContent =
+    new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  document.getElementById('sb-count').textContent = valid.length;
+  document.getElementById('sb-buys').textContent =
+    valid.filter(t => results[t].signal === 'BUY' || results[t].signal === 'STRONG BUY').length;
+  document.getElementById('sb-acc').textContent =
+    valid.filter(t => results[t].signal === 'ACCUMULATE').length;
+  document.getElementById('sb-watch').textContent =
+    valid.filter(t => results[t].signal === 'WATCH').length;
+}
+
+function renderWatchlist() {
+  const el = document.getElementById('stock-list');
+  el.innerHTML = '';
+
+  const order = {'STRONG BUY':0,'BUY':1,'ACCUMULATE':2,'WATCH':3,'AVOID':4};
+  const sorted = [...watchlist].sort((a, b) => {
+    const da = results[a], db = results[b];
+    if (!da || da.error) return 1;
+    if (!db || db.error) return -1;
+    return (order[da.signal] ?? 5) - (order[db.signal] ?? 5) || db.score - da.score;
+  });
+
+  for (const ticker of sorted) {
+    const d = results[ticker];
+    const row = document.createElement('div');
+    row.className = 'stock-row' + (selectedTicker === ticker ? ' active' : '');
+    row.onclick = () => { selectedTicker = ticker; renderWatchlist(); renderDetail(ticker); };
+
+    if (!d || d.error) {
+      row.innerHTML = `
+        <div class="sr-top">
+          <span class="sr-ticker">$${ticker}</span>
+          <span style="font-size:8px;color:var(--red)">ERR</span>
+        </div>
+        <div class="sr-bot">${d?.error || 'Load failed'}</div>`;
+    } else {
+      row.innerHTML = `
+        <div class="sr-top">
+          <span class="sr-ticker">$${ticker}</span>
+          <span class="sig-badge" style="background:${d.sigColor}1a;color:${d.sigColor};border:1px solid ${d.sigColor}44">${d.signal}</span>
+        </div>
+        <div class="sr-mid">
+          <span class="sr-price">$${d.price.toFixed(2)}</span>
+          <span class="${d.chg1d>=0?'pos':'neg'}">${d.chg1d>=0?'+':''}${d.chg1d.toFixed(2)}%</span>
+        </div>
+        <div class="sr-bot">${d.pattern}</div>`;
+    }
+    el.appendChild(row);
+  }
+}
+
+function renderDetail(ticker) {
+  const d = results[ticker];
+  document.getElementById('placeholder').classList.add('hidden');
+  const ct = document.getElementById('detail-content');
+  ct.classList.remove('hidden');
+
+  if (!d || d.error) {
+    ct.innerHTML = `<div class="err-card">⚠ Could not load data for ${ticker}:<br>${d?.error}</div>`;
+    return;
+  }
+
+  const cc = v => v >= 0 ? 'var(--green)' : 'var(--red)';
+  const cs = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+  const fmt = v => v != null ? '$' + v.toFixed(2) : '—';
+  const rsiColor = !d.rsiVal ? 'var(--text)' : d.rsiVal < 30 ? 'var(--green)' : d.rsiVal > 70 ? 'var(--red)' : d.rsiVal < 50 ? 'var(--blue)' : 'var(--amber)';
+
+  ct.innerHTML = `
+    <!-- Detail Header -->
+    <div class="detail-hdr">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <span class="d-ticker">$${ticker}</span>
+          <span class="sig-badge" style="font-size:10px;padding:3px 10px;background:${d.sigBg};color:${d.sigColor};border:1px solid ${d.sigColor}55">${d.signal}</span>
+        </div>
+        <div style="font-size:9px;color:var(--text-dim)">Score: ${d.score>0?'+':''}${d.score}  ·  ${d.pattern}</div>
+      </div>
+      <div>
+        <div class="d-price">$${d.price.toFixed(2)}</div>
+        <div class="d-chg" style="color:${cc(d.chg1d)}">${cs(d.chg1d)} today</div>
+      </div>
+    </div>
+
+    <!-- Sparkline -->
+    <div class="card">
+      <div class="card-title">30-DAY PRICE CHART</div>
+      ${sparkline(d.closes, d.sigColor)}
+    </div>
+
+    <!-- 3-col grid -->
+    <div class="grid-3">
+      <!-- Entry/Exit -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">ENTRY / EXIT LEVELS</div>
+        <div class="dr"><span class="dl">Entry Zone</span><span class="dv" style="color:var(--green);font-size:9px">${d.entryZone}</span></div>
+        <div class="dr"><span class="dl">Target 1</span><span class="dv" style="color:var(--blue)">$${d.target1}</span></div>
+        <div class="dr"><span class="dl">Target 2</span><span class="dv" style="color:var(--blue)">$${d.target2}</span></div>
+        <div class="dr"><span class="dl">Stop Loss</span><span class="dv" style="color:var(--red)">$${d.stopPrice}</span></div>
+        <div class="dr"><span class="dl">Risk/Reward</span><span class="dv" style="color:var(--amber)">${d.rr}</span></div>
+      </div>
+
+      <!-- Indicators -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">INDICATORS</div>
+        <div class="dr"><span class="dl">20 MA</span><span class="dv">${fmt(d.sma20)}</span></div>
+        <div class="dr"><span class="dl">50 MA</span><span class="dv">${fmt(d.sma50)}</span></div>
+        <div class="dr"><span class="dl">100 MA</span><span class="dv">${fmt(d.sma100)}</span></div>
+        <div class="dr"><span class="dl">BB Upper</span><span class="dv">${d.bb?'$'+d.bb.upper.toFixed(2):'—'}</span></div>
+        <div class="dr"><span class="dl">BB Lower</span><span class="dv">${d.bb?'$'+d.bb.lower.toFixed(2):'—'}</span></div>
+        <div class="rsi-wrap">
+          <div class="rsi-labels">
+            <span>30</span>
+            <span style="color:${rsiColor};font-weight:700">RSI ${d.rsiVal??'—'}</span>
+            <span>70</span>
+          </div>
+          <div class="rsi-track">
+            <div class="rsi-mark" style="left:30%"></div>
+            <div class="rsi-mark" style="left:70%"></div>
+            <div class="rsi-fill" style="width:${d.rsiVal??0}%;background:${rsiColor}"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">PERFORMANCE</div>
+        <div class="dr"><span class="dl">Today</span><span class="dv" style="color:${cc(d.chg1d)}">${cs(d.chg1d)}</span></div>
+        <div class="dr"><span class="dl">5-Day</span><span class="dv" style="color:${cc(d.chg5d)}">${cs(d.chg5d)}</span></div>
+        <div class="dr"><span class="dl">1-Month</span><span class="dv" style="color:${cc(d.chg1m)}">${cs(d.chg1m)}</span></div>
+        <div class="dr"><span class="dl">30d Low</span><span class="dv">${fmt(d.support30)}</span></div>
+        <div class="dr"><span class="dl">30d High</span><span class="dv">${fmt(d.resistance30)}</span></div>
+        <div class="dr"><span class="dl">Vol / Avg</span><span class="dv" style="color:${d.volRatio>1.5?'var(--green)':'var(--text)'}">×${d.volRatio.toFixed(2)}</span></div>
+      </div>
+    </div>
+
+    <div style="height:10px"></div>
+
+    <!-- Signal Breakdown -->
+    <div class="card">
+      <div class="card-title">SIGNAL FACTORS (${d.reasons.length} DETECTED)</div>
+      ${d.reasons.length
+        ? d.reasons.map(r => `<div class="reason">${r}</div>`).join('')
+        : '<div style="font-size:10px;color:var(--text-dim)">No significant signals detected</div>'}
+    </div>
+
+    <!-- Verdict -->
+    <div class="verdict" style="border-color:${d.sigColor};background:${d.sigBg}">
+      <div class="verdict-lbl" style="color:${d.sigColor}">◆ VERDICT</div>
+      <div class="verdict-txt">${d.verdict}</div>
+    </div>
+
+    <div style="font-size:8px;color:var(--text-dim);margin-top:4px;margin-bottom:16px;">
+      Data: Alpha Vantage · Last close: ${d.lastDate}
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════
+//  SPARKLINE
+// ══════════════════════════════════════════
+function sparkline(closes, color) {
+  const data = [...closes].reverse();
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = max - min || 1;
+  const W = 100, H = 48;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * W;
+    const y = H - ((v - min) / range) * (H - 6) - 3;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const isUp = data[data.length - 1] >= data[0];
+  const c = isUp ? 'var(--green)' : 'var(--red)';
+  return `
+    <div class="spark-wrap">
+      <svg viewBox="0 0 100 48" style="width:100%;height:48px;" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="sg-${closes.length}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${c}" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="${c}" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <polygon points="0,${H} ${pts} 100,${H}" fill="url(#sg-${closes.length})"/>
+        <polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+      </svg>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
