@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWEEP SCANNER 2.0</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #020305;
+  --panel:   #07090f;
+  --panel2:  #0a0d16;
+  --border:  #111626;
+  --border2: #1a2238;
+  --cyan:    #00e5ff;
+  --green:   #00e676;
+  --amber:   #ffc400;
+  --red:     #ff1744;
+  --purple:  #d500f9;
+  --blue:    #2979ff;
+  --text:    #7b8ba8;
+  --text2:   #3a4560;
+  --bright:  #e8f0ff;
+  --sh: 0 0 20px rgba(0,229,255,0.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'DM Mono','Courier New',monospace;font-size:12px;
+  display:flex;flex-direction:column;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;
+  background:radial-gradient(ellipse at 20% 0%, rgba(0,229,255,0.03) 0%, transparent 60%),
+             radial-gradient(ellipse at 80% 100%, rgba(213,0,249,0.02) 0%, transparent 60%);
+}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 3px,rgba(0,0,0,0.03) 3px);
+}
+
+/* ── SWEEP TYPE COLORS ── */
+.c-stop  { color: var(--red);    }
+.c-equal { color: var(--amber);  }
+.c-ob    { color: var(--purple); }
+.c-bull  { color: var(--green);  }
+.c-bear  { color: var(--red);    }
+
+/* ── HEADER ── */
+#hdr{
+  background:var(--panel);border-bottom:1px solid var(--border);
+  padding:9px 18px;display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.logo{
+  font-family:'Syne Mono',monospace;font-size:14px;font-weight:400;
+  color:var(--bright);letter-spacing:3px;
+}
+.logo em{color:var(--cyan);font-style:normal;text-shadow:0 0 14px rgba(0,229,255,0.5);}
+.logo small{display:block;font-size:9px;color:var(--text2);letter-spacing:4px;margin-top:1px;}
+.hdr-right{display:flex;gap:8px;align-items:center;}
+#countdown{font-size:10px;color:var(--text2);}
+
+/* ── BUTTONS ── */
+button{font-family:'DM Mono',monospace;cursor:pointer;outline:none;}
+.btn{
+  background:transparent;border:1px solid var(--border2);
+  color:var(--text);padding:5px 13px;font-size:10px;letter-spacing:1px;
+  transition:all 0.12s;
+}
+.btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.btn:disabled{opacity:0.3;cursor:not-allowed;}
+.btn-primary{border-color:var(--cyan);color:var(--cyan);}
+.btn-primary:hover{background:rgba(0,229,255,0.07);}
+
+/* ── STATUS BAR ── */
+#sbar{
+  background:#040609;border-bottom:1px solid var(--border);
+  padding:5px 18px;display:flex;gap:22px;overflow-x:auto;flex-shrink:0;
+}
+.sb{display:flex;gap:5px;font-size:10px;white-space:nowrap;}
+.sb-l{color:var(--text2);}
+
+/* ── MAIN LAYOUT ── */
+#main{display:flex;flex:1;overflow:hidden;}
+
+/* ── WATCHLIST ── */
+#wl-panel{
+  width:210px;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;
+}
+.p-hdr{
+  padding:7px 12px;border-bottom:1px solid var(--border);
+  font-size:8px;letter-spacing:3px;color:var(--text2);
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
+#wl-list{overflow-y:auto;flex:1;}
+.wl-row{
+  padding:9px 12px;border-bottom:1px solid #05060c;
+  cursor:pointer;border-left:2px solid transparent;transition:all 0.1s;
+}
+.wl-row:hover{background:#080b12;}
+.wl-row.active{background:#0a0d18;border-left-color:var(--cyan);}
+.wr-a{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.wr-ticker{font-family:'Syne Mono',monospace;font-size:14px;color:var(--bright);}
+.wr-chg{font-size:11px;font-weight:500;}
+.wr-price{font-size:11px;color:var(--bright);}
+.wr-sweeps{font-size:10px;color:var(--text2);margin-top:2px;}
+.sweep-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px;}
+
+/* ── RIGHT AREA ── */
+#right{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+
+/* ── TABS ── */
+#tabs{
+  background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;gap:0;flex-shrink:0;
+}
+.tab{
+  padding:9px 18px;font-size:10px;letter-spacing:2px;color:var(--text2);
+  cursor:pointer;border-bottom:2px solid transparent;transition:all 0.12s;
+  border:none;background:transparent;
+}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+
+/* ── CONTENT PANELS ── */
+#tab-content{flex:1;overflow:hidden;display:flex;}
+.content-pane{flex:1;overflow-y:auto;padding:14px 16px;display:none;}
+.content-pane.active{display:block;}
+
+/* ── SWEEP CARDS ── */
+.sweep-card{
+  background:var(--panel);border:1px solid var(--border);
+  margin-bottom:10px;overflow:hidden;
+  transition:border-color 0.2s;
+}
+.sweep-card:hover{border-color:var(--border2);}
+.sweep-card.new-alert{animation:alertPulse 1s ease;}
+@keyframes alertPulse{
+  0%{border-color:var(--cyan);box-shadow:0 0 16px rgba(0,229,255,0.2);}
+  100%{border-color:var(--border);}
+}
+
+.sc-hdr{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 13px;border-bottom:1px solid var(--border);
+}
+.sc-type{
+  font-size:9px;padding:3px 9px;letter-spacing:2px;font-weight:500;
+  border-radius:1px;border:1px solid;
+}
+.sc-ticker{font-family:'Syne Mono',monospace;font-size:15px;color:var(--bright);}
+.sc-time{font-size:9px;color:var(--text2);}
+.sc-dir{font-size:11px;font-weight:700;}
+
+.sc-body{padding:11px 13px;}
+.sc-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
+.sc-stat{background:var(--panel2);padding:8px 10px;border:1px solid var(--border);}
+.sc-stat-l{font-size:8px;letter-spacing:1px;color:var(--text2);margin-bottom:3px;}
+.sc-stat-v{font-size:13px;font-weight:500;color:var(--bright);}
+.sc-stat-s{font-size:9px;color:var(--text2);margin-top:1px;}
+
+.sc-desc{
+  font-size:11px;color:var(--text);line-height:1.8;
+  padding:9px 11px;background:var(--panel2);border:1px solid var(--border);
+  margin-bottom:8px;
+}
+.sc-desc strong{color:var(--bright);}
+
+/* TP/SL bar */
+.tpsl-wrap{margin-top:8px;}
+.tpsl-label{font-size:8px;letter-spacing:2px;color:var(--text2);margin-bottom:5px;}
+.tpsl-bar{position:relative;height:20px;background:var(--panel2);border:1px solid var(--border);}
+.tpsl-sl{position:absolute;top:0;height:100%;background:rgba(255,23,68,0.25);border-right:1px solid var(--red);}
+.tpsl-entry{position:absolute;top:0;width:2px;height:100%;background:var(--amber);}
+.tpsl-tp1{position:absolute;top:0;height:100%;background:rgba(0,230,118,0.15);border-left:1px solid var(--green);}
+.tpsl-tp2{position:absolute;top:0;height:100%;background:rgba(0,230,118,0.06);border-left:1px dashed var(--green-dim,#005533);}
+.tpsl-price{position:absolute;top:-16px;font-size:9px;transform:translateX(-50%);}
+.tpsl-legends{display:flex;gap:14px;margin-top:4px;font-size:9px;}
+.tpsl-leg{display:flex;align-items:center;gap:4px;}
+.tpsl-dot{width:8px;height:8px;border-radius:1px;}
+
+/* ── HISTORY TABLE ── */
+#history-table{width:100%;border-collapse:collapse;}
+#history-table th{
+  text-align:left;padding:7px 10px;font-size:8px;letter-spacing:2px;
+  color:var(--text2);border-bottom:1px solid var(--border);font-weight:400;
+}
+#history-table td{
+  padding:8px 10px;font-size:11px;color:var(--text);
+  border-bottom:1px solid #05060c;vertical-align:middle;
+}
+#history-table tr:hover td{background:#07090f;}
+
+/* ── PLACEHOLDER ── */
+#placeholder{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  color:var(--text2);gap:10px;
+}
+.ph-icon{font-size:42px;opacity:0.08;}
+.ph-text{font-size:9px;letter-spacing:5px;}
+
+/* ── SETUP MODAL ── */
+#setup-modal{
+  position:fixed;inset:0;background:rgba(2,3,5,0.97);
+  display:flex;align-items:center;justify-content:center;z-index:500;
+}
+.modal-box{
+  background:var(--panel);border:1px solid var(--border2);
+  padding:28px 30px;width:480px;max-width:94vw;
+}
+.modal-title{
+  font-family:'Syne Mono',monospace;font-size:16px;
+  color:var(--cyan);letter-spacing:3px;margin-bottom:5px;
+}
+.modal-sub{font-size:10px;color:var(--text2);line-height:1.9;margin-bottom:18px;}
+.form-grp{margin-bottom:13px;}
+.form-lbl{display:block;font-size:8px;letter-spacing:2px;color:var(--text2);margin-bottom:4px;}
+.form-inp{
+  width:100%;background:#05060c;border:1px solid var(--border2);
+  color:var(--bright);padding:7px 11px;
+  font-family:'DM Mono',monospace;font-size:12px;outline:none;
+}
+.form-inp:focus{border-color:var(--cyan);}
+textarea.form-inp{resize:vertical;min-height:80px;line-height:1.7;}
+.modal-actions{display:flex;gap:8px;margin-top:4px;}
+#setup-err{font-size:10px;color:var(--red);margin-top:8px;}
+
+/* ── LOADING ── */
+#loading{
+  position:fixed;inset:0;background:rgba(2,3,5,0.97);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:400;
+}
+.ld-title{
+  font-family:'Syne Mono',monospace;font-size:11px;
+  color:var(--cyan);letter-spacing:6px;margin-bottom:22px;
+}
+.prog-track{width:300px;height:1px;background:var(--border2);margin-bottom:10px;}
+.prog-fill{height:100%;background:var(--cyan);transition:width 0.3s;box-shadow:0 0 8px var(--cyan);}
+.ld-status{font-size:10px;color:var(--text2);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.blink{animation:blink 1s infinite;}
+
+.hidden{display:none!important;}
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-thumb{background:var(--border2);}
+::-webkit-scrollbar-track{background:transparent;}
+
+.badge{font-size:8px;padding:2px 7px;letter-spacing:1px;border-radius:1px;border:1px solid;font-weight:500;}
+.pos{color:var(--green);}
+.neg{color:var(--red);}
+
+.disclaimer{font-size:9px;color:#0d1020;text-align:center;padding:4px;border-top:1px solid var(--border);flex-shrink:0;}
+
+/* notification permission banner */
+#notif-banner{
+  background:rgba(0,229,255,0.05);border-bottom:1px solid rgba(0,229,255,0.15);
+  padding:6px 18px;display:flex;justify-content:space-between;align-items:center;
+  font-size:10px;color:var(--text);flex-shrink:0;
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup-modal">
+  <div class="modal-box">
+    <div class="modal-title">SWEEP SCANNER 2.0</div>
+    <div class="modal-sub">5-min liquidity sweep detection · Stop hunts · Equal highs/lows · Order blocks<br>Powered by Polygon.io · Auto TP/SL · Browser alerts · Alert history</div>
+    <div class="form-grp">
+      <label class="form-lbl">POLYGON.IO API KEY</label>
+      <input id="poly-key" class="form-inp" type="password" placeholder="Paste your Polygon API key..."/>
+    </div>
+    <div class="form-grp">
+      <label class="form-lbl">WATCHLIST — one ticker per line (max 20)</label>
+      <textarea id="wl-inp" class="form-inp">NVDA
+PLTR
+AMD
+TSLA
+MSFT
+META
+AAPL
+AMZN
+SPY
+QQQ</textarea>
+    </div>
+    <div class="form-grp">
+      <label class="form-lbl">SWEEP SENSITIVITY — min % spike beyond key level (default 0.15%)</label>
+      <input id="sens-inp" class="form-inp" type="number" step="0.01" value="0.15" min="0.05" max="1.0"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveSetup()" style="flex:1;padding:9px;font-size:11px;letter-spacing:2px;">LAUNCH ▶</button>
+      <button class="btn" onclick="loadDemo()" style="padding:9px 16px;font-size:10px;">DEMO</button>
+    </div>
+    <div id="setup-err"></div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading" class="hidden">
+  <div class="ld-title">SCANNING SWEEPS <span class="blink">_</span></div>
+  <div class="prog-track"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+  <div class="ld-status" id="ld-txt">Fetching bars...</div>
+</div>
+
+<!-- NOTIF BANNER -->
+<div id="notif-banner" class="hidden">
+  <span>🔔 Enable browser notifications to get sweep alerts even when this tab is in the background</span>
+  <button class="btn btn-primary" onclick="requestNotifPerms()" style="font-size:9px;padding:3px 10px;">ENABLE</button>
+</div>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div class="logo">SWEEP <em>SCANNER</em> 2.0 <small>LIQUIDITY SWEEP INTELLIGENCE · 5-MIN BARS</small></div>
+  <div class="hdr-right">
+    <span id="countdown"></span>
+    <button class="btn" onclick="openSettings()">⚙</button>
+    <button class="btn btn-primary" onclick="startScan(true)" id="ref-btn">↻ SCAN NOW</button>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="sbar">
+  <div class="sb"><span class="sb-l">SWEEPS DETECTED:</span><span id="sb-sweeps" style="color:var(--cyan)">—</span></div>
+  <div class="sb"><span class="sb-l">STOP HUNTS:</span><span id="sb-sh" style="color:var(--red)">0</span></div>
+  <div class="sb"><span class="sb-l">EQUAL H/L:</span><span id="sb-eq" style="color:var(--amber)">0</span></div>
+  <div class="sb"><span class="sb-l">ORDER BLOCKS:</span><span id="sb-ob" style="color:var(--purple)">0</span></div>
+  <div class="sb"><span class="sb-l">ALERTS FIRED:</span><span id="sb-al" style="color:var(--amber)">0</span></div>
+  <div class="sb"><span class="sb-l">LAST SCAN:</span><span id="sb-time" style="color:var(--text)">—</span></div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- WATCHLIST -->
+  <div id="wl-panel">
+    <div class="p-hdr">WATCHLIST <button class="btn" style="font-size:8px;padding:2px 6px" onclick="openSettings()">EDIT</button></div>
+    <div id="wl-list"><div style="padding:14px 12px;color:var(--text2);font-size:10px;">Waiting...</div></div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="right">
+    <div id="tabs">
+      <button class="tab active" onclick="switchTab('sweeps')">SWEEP ALERTS</button>
+      <button class="tab" onclick="switchTab('history')">ALERT HISTORY</button>
+      <button class="tab" onclick="switchTab('guide')">HOW TO TRADE</button>
+    </div>
+    <div id="tab-content">
+
+      <!-- SWEEPS TAB -->
+      <div class="content-pane active" id="pane-sweeps">
+        <div id="placeholder">
+          <div class="ph-icon">◈</div>
+          <div class="ph-text">SELECT A TICKER · SWEEPS WILL APPEAR HERE</div>
+        </div>
+        <div id="sweeps-content" class="hidden"></div>
+      </div>
+
+      <!-- HISTORY TAB -->
+      <div class="content-pane" id="pane-history">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-size:9px;letter-spacing:3px;color:var(--text2);">ALL SWEEP ALERTS THIS SESSION</div>
+          <button class="btn" onclick="clearHistory()" style="font-size:9px;padding:3px 9px;">CLEAR</button>
+        </div>
+        <table id="history-table">
+          <thead><tr>
+            <th>TIME</th><th>TICKER</th><th>TYPE</th><th>DIR</th>
+            <th>SWEEP PRICE</th><th>ENTRY</th><th>SL</th><th>TP1</th><th>TP2</th><th>R:R</th>
+          </tr></thead>
+          <tbody id="history-body"><tr><td colspan="10" style="color:var(--text2);padding:20px 10px;font-size:10px;">No alerts yet — alerts will appear here as sweeps are detected.</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- GUIDE TAB -->
+      <div class="content-pane" id="pane-guide">
+        <div style="max-width:620px;">
+
+          <div style="font-family:'Syne Mono',monospace;font-size:13px;color:var(--cyan);letter-spacing:3px;margin-bottom:18px;">HOW TO TRADE LIQUIDITY SWEEPS</div>
+
+          <div style="margin-bottom:18px;background:var(--panel);border:1px solid var(--border);padding:14px 16px;">
+            <div style="font-size:9px;letter-spacing:3px;color:var(--red);margin-bottom:10px;">◈ STOP HUNT</div>
+            <div style="font-size:12px;color:var(--text);line-height:1.9;">
+              <strong style="color:var(--bright)">What it is:</strong> Price spikes above a key level (triggering stops of short sellers) or below a key level (triggering stops of longs), then <em style="color:var(--cyan)">immediately reverses</em>. This is smart money grabbing liquidity before moving the other direction.<br><br>
+              <strong style="color:var(--bright)">How to trade it:</strong><br>
+              1. Wait for the sweep candle to <strong style="color:var(--amber)">CLOSE back inside</strong> the key level — do not enter during the wick<br>
+              2. Enter on the NEXT candle open (confirmation)<br>
+              3. Stop loss goes just beyond the sweep wick tip<br>
+              4. Target = next liquidity pool in the reversal direction<br><br>
+              <strong style="color:var(--bright)">Best confirmation:</strong> Volume spike on the sweep candle + small body (long wick) = strong rejection
+            </div>
+          </div>
+
+          <div style="margin-bottom:18px;background:var(--panel);border:1px solid var(--border);padding:14px 16px;">
+            <div style="font-size:9px;letter-spacing:3px;color:var(--amber);margin-bottom:10px;">◈ EQUAL HIGHS / LOWS</div>
+            <div style="font-size:12px;color:var(--text);line-height:1.9;">
+              <strong style="color:var(--bright)">What it is:</strong> Two or more highs/lows at the same price level = a liquidity pool. Stop orders cluster here. When price sweeps through them and reverses, it's a high-probability setup.<br><br>
+              <strong style="color:var(--bright)">How to trade it:</strong><br>
+              1. <strong style="color:var(--amber)">Equal highs swept</strong> → price ran stops above, expect bearish reversal → short entry<br>
+              2. <strong style="color:var(--amber)">Equal lows swept</strong> → price ran stops below, expect bullish reversal → long entry<br>
+              3. Entry after the sweep candle closes. SL just beyond the highs/lows.<br><br>
+              <strong style="color:var(--bright)">Key insight:</strong> The more times price has tested the same level without breaking it, the more stops are sitting there. A sweep of triple-equal highs = massive liquidity grab.
+            </div>
+          </div>
+
+          <div style="margin-bottom:18px;background:var(--panel);border:1px solid var(--border);padding:14px 16px;">
+            <div style="font-size:9px;letter-spacing:3px;color:var(--purple);margin-bottom:10px;">◈ ORDER BLOCK</div>
+            <div style="font-size:12px;color:var(--text);line-height:1.9;">
+              <strong style="color:var(--bright)">What it is:</strong> The last opposing candle before a strong directional move. Institutions place large orders here. When price retraces to this zone, it often reacts strongly — this is your entry.<br><br>
+              <strong style="color:var(--bright)">Bullish OB:</strong> Last bearish (red) candle before a strong push up → buy when price returns to that candle's range<br>
+              <strong style="color:var(--bright)">Bearish OB:</strong> Last bullish (green) candle before a strong push down → sell when price returns to that candle's range<br><br>
+              <strong style="color:var(--bright)">How to trade it:</strong><br>
+              1. Mark the order block zone (high to low of the candle)<br>
+              2. Wait for price to retrace INTO the zone<br>
+              3. Enter at 50% of the candle or on a lower timeframe confirmation<br>
+              4. SL just beyond the OB. TP = the origin of the move that created it.
+            </div>
+          </div>
+
+          <div style="background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.15);padding:14px 16px;font-size:12px;color:var(--text);line-height:1.9;">
+            <div style="font-size:9px;letter-spacing:3px;color:var(--cyan);margin-bottom:8px;">⬡ COMBINING ALL THREE FOR HIGHEST PROBABILITY</div>
+            When a <strong style="color:var(--red)">stop hunt</strong> occurs at <strong style="color:var(--amber)">equal highs/lows</strong> AND that level coincides with an <strong style="color:var(--purple)">order block</strong> — you have a triple confluence setup. These are the highest-probability trades the scanner can find. Wait for all three to align on the same ticker at the same price zone.
+          </div>
+
+          <div style="margin-top:16px;font-size:10px;color:var(--text2);line-height:1.8;">
+            ⚠ Always confirm with price action. Scanner detects setups — your job is to confirm with the candle close. Never enter during the sweep wick. Risk only what you can afford to lose.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="disclaimer">NOT FINANCIAL ADVICE · EDUCATIONAL USE ONLY · SWEEP DETECTION BASED ON POLYGON.IO 5-MIN AGGREGATES</div>
+
+<script>
+// ═══════════════════════════════════
+//  STATE
+// ═══════════════════════════════════
+let apiKey='', watchlist=[], sensitivity=0.0015;
+let stockData={}, selectedTicker=null;
+let alertCount=0, alertHistory=[];
+let refreshInterval=null, countdownInterval=null;
+let REFRESH_SECS=120, isDemo=false;
+let audioCtx=null;
+
+// ═══════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════
+function getAudio(){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function playTone(freq,dur,vol=0.3){
+  try{
+    const c=getAudio(),o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);
+    o.frequency.value=freq;o.type='sine';
+    g.gain.setValueAtTime(vol,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+dur);
+    o.start();o.stop(c.currentTime+dur);
+  }catch(e){}
+}
+function playSweepAlert(type){
+  if(type==='STOP HUNT'){
+    playTone(440,0.08);setTimeout(()=>playTone(660,0.12),90);setTimeout(()=>playTone(880,0.15),200);
+  } else if(type==='EQUAL H/L'){
+    playTone(550,0.1);setTimeout(()=>playTone(550,0.1),150);
+  } else {
+    playTone(480,0.08);setTimeout(()=>playTone(720,0.18),110);
+  }
+}
+
+// ═══════════════════════════════════
+//  NOTIFICATIONS
+// ═══════════════════════════════════
+async function requestNotifPerms(){
+  const p=await Notification.requestPermission();
+  if(p==='granted') document.getElementById('notif-banner').classList.add('hidden');
+}
+function sendNotif(ticker,type,dir){
+  if(Notification.permission==='granted'){
+    new Notification(`🔥 ${ticker} — ${type}`,{
+      body:`${dir} sweep detected · Check entry levels`,
+      icon:'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/Chart%20increasing/3D/chart_increasing_3d.png'
+    });
+  }
+}
+function checkNotifBanner(){
+  if(Notification.permission==='default')
+    document.getElementById('notif-banner').classList.remove('hidden');
+}
+
+// ═══════════════════════════════════
+//  INIT
+// ═══════════════════════════════════
+window.onload=()=>{
+  apiKey=localStorage.getItem('sw_key')||'';
+  const wl=localStorage.getItem('sw_wl');
+  watchlist=wl?JSON.parse(wl):[];
+  sensitivity=parseFloat(localStorage.getItem('sw_sens')||'0.0015');
+  alertHistory=JSON.parse(localStorage.getItem('sw_history')||'[]');
+  renderHistory();
+
+  if(apiKey&&watchlist.length){
+    document.getElementById('setup-modal').classList.add('hidden');
+    checkNotifBanner();
+    startScan(false);
+  }
+};
+
+// ═══════════════════════════════════
+//  SETUP
+// ═══════════════════════════════════
+function saveSetup(){
+  const k=document.getElementById('poly-key').value.trim();
+  const wt=document.getElementById('wl-inp').value.trim();
+  const s=parseFloat(document.getElementById('sens-inp').value)||0.15;
+  if(!k) return setErr('Enter your Polygon API key');
+  if(!wt) return setErr('Enter at least one ticker');
+  apiKey=k; isDemo=false;
+  watchlist=wt.split('\n').map(t=>t.trim().toUpperCase()).filter(Boolean).slice(0,20);
+  sensitivity=s/100;
+  localStorage.setItem('sw_key',k);
+  localStorage.setItem('sw_wl',JSON.stringify(watchlist));
+  localStorage.setItem('sw_sens',sensitivity);
+  document.getElementById('setup-modal').classList.add('hidden');
+  checkNotifBanner();
+  startScan(false);
+}
+function loadDemo(){
+  isDemo=true;
+  watchlist=['NVDA','PLTR','AMD','TSLA','SPY','QQQ'];
+  sensitivity=0.0015;
+  document.getElementById('setup-modal').classList.add('hidden');
+  checkNotifBanner();
+  startScan(false);
+}
+function openSettings(){
+  document.getElementById('poly-key').value=apiKey;
+  document.getElementById('wl-inp').value=watchlist.join('\n');
+  document.getElementById('sens-inp').value=(sensitivity*100).toFixed(2);
+  document.getElementById('setup-err').textContent='';
+  document.getElementById('setup-modal').classList.remove('hidden');
+}
+function setErr(m){document.getElementById('setup-err').textContent='⚠ '+m;}
+
+// ═══════════════════════════════════
+//  SCAN LOOP
+// ═══════════════════════════════════
+function startScan(force){
+  clearTimeout(refreshInterval);
+  clearInterval(countdownInterval);
+  fetchAll();
+}
+function scheduleNext(){
+  let rem=REFRESH_SECS;
+  const el=document.getElementById('countdown');
+  countdownInterval=setInterval(()=>{
+    rem--;
+    const m=Math.floor(rem/60),s=rem%60;
+    el.textContent=`↻ ${m}:${s.toString().padStart(2,'0')}`;
+    if(rem<=0){clearInterval(countdownInterval);startScan(true);}
+  },1000);
+}
+
+// ═══════════════════════════════════
+//  FETCH
+// ═══════════════════════════════════
+async function fetchAll(){
+  const ov=document.getElementById('loading'),
+        pg=document.getElementById('prog'),
+        tx=document.getElementById('ld-txt'),
+        rb=document.getElementById('ref-btn');
+  ov.classList.remove('hidden'); rb.disabled=true;
+  let done=0;
+  for(const t of watchlist){
+    tx.textContent=`Scanning ${t}... (${done+1}/${watchlist.length})`;
+    pg.style.width=`${(done/watchlist.length)*100}%`;
+    try{
+      stockData[t]=isDemo?genDemo(t):await fetchTicker(t);
+    }catch(e){
+      stockData[t]={ticker:t,error:e.message,sweeps:[]};
+    }
+    done++;
+    if(!isDemo&&done<watchlist.length) await sleep(350);
+  }
+  pg.style.width='100%';
+  tx.textContent='Scan complete';
+  await sleep(300);
+  ov.classList.add('hidden'); rb.disabled=false;
+  processAlerts();
+  renderAll();
+  scheduleNext();
+}
+
+function fmtDate(d){return d.toISOString().split('T')[0];}
+
+async function fetchTicker(ticker){
+  const BASE='https://api.polygon.io';
+  // Get last 2 trading days of 5-min bars
+  const bars=[];
+  let daysBack=0;
+  while(bars.length<50&&daysBack<6){
+    const dt=fmtDate(new Date(Date.now()-daysBack*86400000));
+    try{
+      const r=await polyGet(`${BASE}/v2/aggs/ticker/${ticker}/range/5/minute/${dt}/${dt}?adjusted=true&sort=asc&limit=390&apiKey=${apiKey}`);
+      if(r.results&&r.results.length>5) bars.unshift(...r.results);
+    }catch(e){}
+    daysBack++;
+  }
+  if(bars.length<10) throw new Error('Not enough bar data');
+
+  const price=bars[bars.length-1].c;
+  const open=bars.find(b=>b)?.o||price;
+  const chg1d=open?((price-open)/open)*100:0;
+  const totalVol=bars.reduce((s,b)=>s+b.v,0);
+  const vwapNum=bars.reduce((s,b)=>s+(b.vw||b.c)*b.v,0);
+  const vwap=vwapNum/(totalVol||1);
+  const sweeps=detectSweeps(ticker,bars,price,vwap);
+  return{ticker,price,chg1d,vwap,bars,sweeps,lastScan:new Date().toLocaleTimeString()};
+}
+
+async function polyGet(url){
+  const r=await fetch(url);
+  let d;
+  try{d=await r.json();}catch(e){throw new Error(`HTTP ${r.status}`);}
+  if(!r.ok) throw new Error(d?.message||d?.error||`HTTP ${r.status}`);
+  if(d.status==='ERROR') throw new Error(d.message||d.error||'Polygon error');
+  return d;
+}
+
+// ═══════════════════════════════════
+//  SWEEP DETECTION ENGINE
+// ═══════════════════════════════════
+function detectSweeps(ticker, bars, currentPrice, vwap){
+  const sweeps=[];
+  const n=bars.length;
+  if(n<10) return sweeps;
+
+  // ── 1. STOP HUNT DETECTION ──
+  // Look at recent bars for spikes beyond rolling highs/lows that then reverse
+  for(let i=5;i<n;i++){
+    const bar=bars[i];
+    const lookback=bars.slice(Math.max(0,i-20),i);
+    const rollHigh=Math.max(...lookback.map(b=>b.h));
+    const rollLow=Math.min(...lookback.map(b=>b.l));
+    const bodySize=Math.abs(bar.c-bar.o);
+    const barRange=bar.h-bar.l;
+
+    // Bullish stop hunt: wick below rollLow then closes back above
+    const lowerWick=Math.min(bar.o,bar.c)-bar.l;
+    const upperWick=bar.h-Math.max(bar.o,bar.c);
+
+    if(bar.l<rollLow*(1-sensitivity)&&bar.c>rollLow&&lowerWick>bodySize*1.5){
+      const sweepDist=rollLow-bar.l;
+      const entry=bar.c;
+      const sl=bar.l*(1-0.001);
+      const slDist=entry-sl;
+      const tp1=entry+slDist*2;
+      const tp2=entry+slDist*3.5;
+      sweeps.push({
+        type:'STOP HUNT',dir:'BULL',
+        sweepPrice:bar.l,keyLevel:rollLow,
+        entry,sl,tp1,tp2,
+        rr:((tp1-entry)/(entry-sl)).toFixed(1),
+        sweepDist,
+        barIdx:i,barTime:fmtBarTime(bar.t),
+        desc:`Price spiked ${(sweepDist/rollLow*100).toFixed(2)}% below the ${lookback.length}-bar low at $${rollLow.toFixed(2)}, grabbed stops from long liquidations, then closed back above. Bullish reversal signal — longs targeted below, now freed to move up.`,
+        fresh:i>=n-3,
+      });
+    }
+
+    // Bearish stop hunt: wick above rollHigh then closes back below
+    if(bar.h>rollHigh*(1+sensitivity)&&bar.c<rollHigh&&upperWick>bodySize*1.5){
+      const sweepDist=bar.h-rollHigh;
+      const entry=bar.c;
+      const sl=bar.h*(1+0.001);
+      const slDist=sl-entry;
+      const tp1=entry-slDist*2;
+      const tp2=entry-slDist*3.5;
+      sweeps.push({
+        type:'STOP HUNT',dir:'BEAR',
+        sweepPrice:bar.h,keyLevel:rollHigh,
+        entry,sl,tp1,tp2,
+        rr:((entry-tp1)/(sl-entry)).toFixed(1),
+        sweepDist,
+        barIdx:i,barTime:fmtBarTime(bar.t),
+        desc:`Price spiked ${(sweepDist/rollHigh*100).toFixed(2)}% above the ${lookback.length}-bar high at $${rollHigh.toFixed(2)}, grabbed stops from short sellers, then closed back below. Bearish reversal signal — shorts targeted above, now freed to move down.`,
+        fresh:i>=n-3,
+      });
+    }
+  }
+
+  // ── 2. EQUAL HIGHS / LOWS ──
+  const equalTolerance=0.0008; // 0.08% = "equal"
+  const highs=bars.map(b=>b.h);
+  const lows=bars.map(b=>b.l);
+
+  // Find clusters of equal highs
+  for(let i=8;i<n;i++){
+    const bar=bars[i];
+    // Count how many bars in lookback have highs within tolerance
+    const lookback=bars.slice(Math.max(0,i-30),i);
+    const eqHighBars=lookback.filter(b=>Math.abs(b.h-bar.h)/bar.h<equalTolerance);
+    if(eqHighBars.length>=2&&bar.h>Math.max(...lookback.map(b=>b.h))*(1+sensitivity)){
+      // This bar swept the equal highs
+      const levelPrice=eqHighBars.reduce((s,b)=>s+b.h,0)/eqHighBars.length;
+      // If closes below the level = bearish sweep
+      if(bar.c<levelPrice){
+        const entry=bar.c;
+        const sl=bar.h*(1+0.001);
+        const slDist=sl-entry;
+        const tp1=entry-slDist*2;
+        const tp2=entry-slDist*3.5;
+        sweeps.push({
+          type:'EQUAL H/L',dir:'BEAR',
+          sweepPrice:bar.h,keyLevel:levelPrice,
+          entry,sl,tp1,tp2,
+          rr:((entry-tp1)/(sl-entry)).toFixed(1),
+          sweepDist:bar.h-levelPrice,
+          barIdx:i,barTime:fmtBarTime(bar.t),
+          desc:`${eqHighBars.length+1} equal highs at $${levelPrice.toFixed(2)} swept. Stop orders from ${eqHighBars.length} prior failed breakout attempts triggered, then price rejected. Classic liquidity grab above equal highs — smart money was selling into the breakout buyers.`,
+          fresh:i>=n-3,
+          touches:eqHighBars.length+1,
+        });
+      }
+    }
+
+    // Equal lows swept
+    const eqLowBars=lookback.filter(b=>Math.abs(b.l-bar.l)/bar.l<equalTolerance);
+    if(eqLowBars.length>=2&&bar.l<Math.min(...lookback.map(b=>b.l))*(1-sensitivity)){
+      const levelPrice=eqLowBars.reduce((s,b)=>s+b.l,0)/eqLowBars.length;
+      if(bar.c>levelPrice){
+        const entry=bar.c;
+        const sl=bar.l*(1-0.001);
+        const slDist=entry-sl;
+        const tp1=entry+slDist*2;
+        const tp2=entry+slDist*3.5;
+        sweeps.push({
+          type:'EQUAL H/L',dir:'BULL',
+          sweepPrice:bar.l,keyLevel:levelPrice,
+          entry,sl,tp1,tp2,
+          rr:((tp1-entry)/(entry-sl)).toFixed(1),
+          sweepDist:levelPrice-bar.l,
+          barIdx:i,barTime:fmtBarTime(bar.t),
+          desc:`${eqLowBars.length+1} equal lows at $${levelPrice.toFixed(2)} swept. Stop orders from ${eqLowBars.length} prior failed breakdown attempts triggered, then price bounced. Stop hunt below equal lows — smart money was buying from the panic sellers.`,
+          fresh:i>=n-3,
+          touches:eqLowBars.length+1,
+        });
+      }
+    }
+  }
+
+  // ── 3. ORDER BLOCK DETECTION ──
+  for(let i=3;i<n-1;i++){
+    const bar=bars[i];
+    const next=bars.slice(i+1,Math.min(i+4,n));
+    if(next.length<2) continue;
+    const isBullish=bar.c>bar.o;
+    const bodySize=Math.abs(bar.c-bar.o);
+    const avgBodyAfter=next.reduce((s,b)=>s+Math.abs(b.c-b.o),0)/next.length;
+
+    // Bearish OB: last bull candle before 2+ strong bear candles
+    if(isBullish&&next.every(b=>b.c<b.o)&&avgBodyAfter>bodySize*0.8){
+      const obHigh=bar.h, obLow=bar.l, obMid=(bar.h+bar.l)/2;
+      // Check if current price is near the OB (retest)
+      const dist=Math.abs(currentPrice-obMid)/obMid;
+      if(dist<0.03){
+        const entry=currentPrice;
+        const sl=obHigh*(1+0.001);
+        const slDist=sl-entry;
+        const tp1=entry-slDist*2;
+        const tp2=entry-slDist*3;
+        sweeps.push({
+          type:'ORDER BLOCK',dir:'BEAR',
+          sweepPrice:obMid,keyLevel:obHigh,
+          obHigh,obLow,entry,sl,tp1,tp2,
+          rr:((entry-tp1)/(sl-entry)).toFixed(1),
+          sweepDist:obHigh-obLow,
+          barIdx:i,barTime:fmtBarTime(bar.t),
+          desc:`Bearish order block at $${obLow.toFixed(2)}–$${obHigh.toFixed(2)} (${fmtBarTime(bar.t)}). Last bullish candle before ${next.length} consecutive bearish candles — institutional sell orders placed here. Price is currently retesting this zone ($${dist<0.01?'within 1%':'~'+((dist)*100).toFixed(1)+'%'} away). High-probability short entry zone.`,
+          fresh:dist<0.008,
+        });
+      }
+    }
+
+    // Bullish OB: last bear candle before 2+ strong bull candles
+    if(!isBullish&&next.every(b=>b.c>b.o)&&avgBodyAfter>bodySize*0.8){
+      const obHigh=bar.h, obLow=bar.l, obMid=(bar.h+bar.l)/2;
+      const dist=Math.abs(currentPrice-obMid)/obMid;
+      if(dist<0.03){
+        const entry=currentPrice;
+        const sl=obLow*(1-0.001);
+        const slDist=entry-sl;
+        const tp1=entry+slDist*2;
+        const tp2=entry+slDist*3;
+        sweeps.push({
+          type:'ORDER BLOCK',dir:'BULL',
+          sweepPrice:obMid,keyLevel:obLow,
+          obHigh,obLow,entry,sl,tp1,tp2,
+          rr:((tp1-entry)/(entry-sl)).toFixed(1),
+          sweepDist:obHigh-obLow,
+          barIdx:i,barTime:fmtBarTime(bar.t),
+          desc:`Bullish order block at $${obLow.toFixed(2)}–$${obHigh.toFixed(2)} (${fmtBarTime(bar.t)}). Last bearish candle before ${next.length} consecutive bullish candles — institutional buy orders placed here. Price is retesting this zone. High-probability long entry zone.`,
+          fresh:dist<0.008,
+        });
+      }
+    }
+  }
+
+  // Sort: fresh first, then by type priority
+  const priority={'STOP HUNT':0,'EQUAL H/L':1,'ORDER BLOCK':2};
+  return sweeps
+    .sort((a,b)=>(b.fresh?1:0)-(a.fresh?1:0)||(priority[a.type]||3)-(priority[b.type]||3))
+    .slice(0,15); // cap per ticker
+}
+
+function fmtBarTime(t){
+  return new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+// ═══════════════════════════════════
+//  PROCESS ALERTS
+// ═══════════════════════════════════
+function processAlerts(){
+  const freshSweeps=[];
+  for(const t of watchlist){
+    const d=stockData[t];
+    if(!d||d.error) continue;
+    for(const sw of d.sweeps||[]){
+      if(sw.fresh){
+        const key=`${t}_${sw.type}_${sw.barTime}_${sw.dir}`;
+        const alreadyFired=alertHistory.some(a=>a.key===key);
+        if(!alreadyFired){
+          freshSweeps.push({...sw,ticker:t,key});
+          alertHistory.unshift({
+            key,time:new Date().toLocaleTimeString(),
+            ticker:t,type:sw.type,dir:sw.dir,
+            sweepPrice:sw.sweepPrice,entry:sw.entry,
+            sl:sw.sl,tp1:sw.tp1,tp2:sw.tp2,rr:sw.rr,
+          });
+          alertCount++;
+        }
+      }
+    }
+  }
+
+  if(freshSweeps.length>0){
+    // Keep history to 200
+    if(alertHistory.length>200) alertHistory=alertHistory.slice(0,200);
+    localStorage.setItem('sw_history',JSON.stringify(alertHistory));
+    document.getElementById('sb-al').textContent=alertCount;
+    renderHistory();
+
+    // Fire alerts for each fresh sweep
+    for(const sw of freshSweeps){
+      playSweepAlert(sw.type);
+      sendNotif(sw.ticker,sw.type,sw.dir);
+    }
+  }
+}
+
+// ═══════════════════════════════════
+//  DEMO DATA
+// ═══════════════════════════════════
+function genDemo(ticker){
+  const prices={NVDA:183,PLTR:155,AMD:193,TSLA:396,SPY:555,QQQ:470};
+  const price=prices[ticker]||100;
+  const bars=[];
+  for(let i=0;i<60;i++){
+    const t=Date.now()-(59-i)*5*60000;
+    const o=price*(0.993+Math.sin(i/7)*0.006+Math.random()*0.003);
+    const c=o*(0.997+Math.random()*0.006);
+    const h=Math.max(o,c)*(1+Math.random()*0.003);
+    const l=Math.min(o,c)*(1-Math.random()*0.003);
+    bars.push({t,o,h,l,c,v:Math.floor(Math.random()*80000+20000),vw:(o+c)/2});
+  }
+  // Inject a stop hunt on bar 55
+  const sh=bars[55];
+  const refLow=Math.min(...bars.slice(30,55).map(b=>b.l));
+  sh.l=refLow*(1-0.003);
+  sh.c=refLow*1.001;
+
+  // Inject equal lows
+  const el=bars.slice(20,50);
+  const eqLow=price*0.994;
+  [25,35,45].forEach(i=>{ bars[i].l=eqLow*(0.9998+Math.random()*0.0004); });
+  bars[57].l=eqLow*(1-0.002); bars[57].c=eqLow*1.001;
+
+  const vwap=price*0.999;
+  const sweeps=detectSweeps(ticker,bars,price,vwap);
+  return{ticker,price,chg1d:(Math.random()-0.4)*3,vwap,bars,sweeps,lastScan:new Date().toLocaleTimeString()};
+}
+
+// ═══════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════
+function renderAll(){
+  renderStatusBar();
+  renderWatchlist();
+  if(selectedTicker&&stockData[selectedTicker])
+    renderSweeps(selectedTicker);
+  document.getElementById('sb-time').textContent=new Date().toLocaleTimeString();
+}
+
+function renderStatusBar(){
+  let totalSweeps=0,sh=0,eq=0,ob=0;
+  for(const t of watchlist){
+    const d=stockData[t];
+    if(!d||d.error) continue;
+    for(const sw of d.sweeps||[]){
+      totalSweeps++;
+      if(sw.type==='STOP HUNT') sh++;
+      else if(sw.type==='EQUAL H/L') eq++;
+      else if(sw.type==='ORDER BLOCK') ob++;
+    }
+  }
+  document.getElementById('sb-sweeps').textContent=totalSweeps;
+  document.getElementById('sb-sh').textContent=sh;
+  document.getElementById('sb-eq').textContent=eq;
+  document.getElementById('sb-ob').textContent=ob;
+}
+
+function renderWatchlist(){
+  const el=document.getElementById('wl-list');
+  el.innerHTML='';
+  const sorted=[...watchlist].sort((a,b)=>{
+    const da=stockData[a],db=stockData[b];
+    if(!da||da.error) return 1; if(!db||db.error) return -1;
+    const fa=da.sweeps?.filter(s=>s.fresh).length||0;
+    const fb=db.sweeps?.filter(s=>s.fresh).length||0;
+    return fb-fa||(db.sweeps?.length||0)-(da.sweeps?.length||0);
+  });
+
+  for(const t of sorted){
+    const d=stockData[t];
+    const row=document.createElement('div');
+    row.className='wl-row'+(selectedTicker===t?' active':'');
+    row.onclick=()=>{selectedTicker=t;renderWatchlist();renderSweeps(t);};
+
+    if(!d||d.error){
+      row.innerHTML=`<div class="wr-a"><span class="wr-ticker">$${t}</span><span style="color:var(--red);font-size:9px">ERR</span></div><div class="wr-sweeps" style="color:var(--red);font-size:9px;word-break:break-word">${d?.error||'failed'}</div>`;
+    } else {
+      const sweeps=d.sweeps||[];
+      const fresh=sweeps.filter(s=>s.fresh);
+      const dots=sweeps.slice(0,5).map(s=>{
+        const c=typeColor(s.type);
+        return `<span class="sweep-dot" style="background:${c};opacity:${s.fresh?1:0.35}"></span>`;
+      }).join('');
+      row.innerHTML=`
+        <div class="wr-a">
+          <span class="wr-ticker">$${t}</span>
+          <span class="wr-chg ${d.chg1d>=0?'pos':'neg'}">${d.chg1d>=0?'+':''}${d.chg1d.toFixed(2)}%</span>
+        </div>
+        <div class="wr-a" style="margin-top:2px">
+          <span class="wr-price">$${d.price.toFixed(2)}</span>
+          ${fresh.length?`<span style="color:var(--cyan);font-size:9px;font-weight:700">⚡ ${fresh.length} NEW</span>`:''}
+        </div>
+        <div class="wr-sweeps">${dots} ${sweeps.length} sweep${sweeps.length!==1?'s':''} detected</div>`;
+    }
+    el.appendChild(row);
+  }
+}
+
+function renderSweeps(ticker){
+  const d=stockData[ticker];
+  document.getElementById('placeholder').classList.add('hidden');
+  const ct=document.getElementById('sweeps-content');
+  ct.classList.remove('hidden');
+
+  if(!d||d.error){
+    ct.innerHTML=`<div style="color:var(--red);padding:14px;font-size:11px;background:var(--panel);border:1px solid var(--border)">⚠ ${d?.error||'No data'}</div>`;
+    return;
+  }
+
+  const sweeps=d.sweeps||[];
+  if(!sweeps.length){
+    ct.innerHTML=`
+      <div style="padding:20px 16px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:11px;line-height:1.8;">
+        <div style="color:var(--text2);font-size:13px;margin-bottom:8px;">No sweeps detected on $${ticker}</div>
+        Price: <strong style="color:var(--bright)">$${d.price.toFixed(2)}</strong> ·
+        VWAP: <strong style="color:var(--amber)">$${d.vwap.toFixed(2)}</strong> ·
+        ${d.bars.length} bars analyzed<br><br>
+        <span style="color:var(--text2)">Sweeps require price to spike beyond a key level and reverse. Try lowering sensitivity or check back when the market has more movement.</span>
+      </div>`;
+    return;
+  }
+
+  ct.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:9px;letter-spacing:3px;color:var(--text2)">$${ticker} · ${sweeps.length} SWEEPS · ${d.bars.length} BARS ANALYZED</div>
+      <div style="font-size:10px;color:var(--text2)">Price: <span style="color:var(--bright)">$${d.price.toFixed(2)}</span> · VWAP: <span style="color:var(--amber)">$${d.vwap.toFixed(2)}</span></div>
+    </div>
+    ${sweeps.map(sw=>renderSweepCard(sw,d.price)).join('')}`;
+}
+
+function renderSweepCard(sw,currentPrice){
+  const col=typeColor(sw.type);
+  const dirCol=sw.dir==='BULL'?'var(--green)':'var(--red)';
+  const dirSymbol=sw.dir==='BULL'?'▲ LONG':'▼ SHORT';
+  const isBull=sw.dir==='BULL';
+
+  // TP/SL bar geometry
+  const lo=Math.min(sw.sl,sw.tp2,sw.entry)*0.9995;
+  const hi=Math.max(sw.sl,sw.tp2,sw.entry)*1.0005;
+  const range=hi-lo;
+  const pct=v=>Math.max(0,Math.min(100,((v-lo)/range)*100));
+
+  let barHtml='';
+  if(isBull){
+    barHtml=`
+      <div class="tpsl-bar" style="position:relative;height:22px;background:var(--panel2);border:1px solid var(--border)">
+        <div style="position:absolute;left:0;width:${pct(sw.sl)}%;height:100%;background:rgba(255,23,68,0.2);border-right:2px solid var(--red)"></div>
+        <div style="position:absolute;left:${pct(sw.entry)}%;width:${pct(sw.tp1)-pct(sw.entry)}%;height:100%;background:rgba(0,230,118,0.15);border-right:1px solid var(--green)"></div>
+        <div style="position:absolute;left:${pct(sw.tp1)}%;width:${pct(sw.tp2)-pct(sw.tp1)}%;height:100%;background:rgba(0,230,118,0.07);border-right:1px dashed rgba(0,230,118,0.4)"></div>
+        <div style="position:absolute;left:${pct(sw.entry)-0.5}%;width:2px;height:100%;background:var(--amber)"></div>
+        <div class="tpsl-price" style="left:${pct(sw.sl)}%;color:var(--red);top:auto;bottom:-17px">SL $${sw.sl.toFixed(2)}</div>
+        <div class="tpsl-price" style="left:${pct(sw.entry)}%;color:var(--amber);top:auto;bottom:-17px">E $${sw.entry.toFixed(2)}</div>
+        <div class="tpsl-price" style="left:${pct(sw.tp1)}%;color:var(--green);top:auto;bottom:-17px">TP1 $${sw.tp1.toFixed(2)}</div>
+        <div class="tpsl-price" style="left:${Math.min(pct(sw.tp2),92)}%;color:rgba(0,230,118,0.6);top:auto;bottom:-17px">TP2 $${sw.tp2.toFixed(2)}</div>
+      </div>`;
+  } else {
+    barHtml=`
+      <div class="tpsl-bar" style="position:relative;height:22px;background:var(--panel2);border:1px solid var(--border)">
+        <div style="position:absolute;left:${pct(sw.tp2)}%;width:${pct(sw.tp1)-pct(sw.tp2)}%;height:100%;background:rgba(0,230,118,0.07);border-right:1px dashed rgba(0,230,118,0.4)"></div>
+        <div style="position:absolute;left:${pct(sw.tp1)}%;width:${pct(sw.entry)-pct(sw.tp1)}%;height:100%;background:rgba(0,230,118,0.15);border-right:1px solid var(--green)"></div>
+        <div style="position:absolute;left:${pct(sw.entry)}%;width:${pct(sw.sl)-pct(sw.entry)}%;height:100%;background:rgba(255,23,68,0.2);border-left:2px solid var(--red)"></div>
+        <div style="position:absolute;left:${pct(sw.entry)-0.5}%;width:2px;height:100%;background:var(--amber)"></div>
+        <div class="tpsl-price" style="left:${Math.max(pct(sw.tp2),2)}%;color:rgba(0,230,118,0.6);top:auto;bottom:-17px">TP2 $${sw.tp2.toFixed(2)}</div>
+        <div class="tpsl-price" style="left:${pct(sw.tp1)}%;color:var(--green);top:auto;bottom:-17px">TP1 $${sw.tp1.toFixed(2)}</div>
+        <div class="tpsl-price" style="left:${pct(sw.entry)}%;color:var(--amber);top:auto;bottom:-17px">E $${sw.entry.toFixed(2)}</div>
+        <div class="tpsl-price" style="left:${Math.min(pct(sw.sl),94)}%;color:var(--red);top:auto;bottom:-17px">SL $${sw.sl.toFixed(2)}</div>
+      </div>`;
+  }
+
+  const slPct=((Math.abs(sw.entry-sw.sl)/sw.entry)*100).toFixed(2);
+  const tp1Pct=((Math.abs(sw.tp1-sw.entry)/sw.entry)*100).toFixed(2);
+  const tp2Pct=((Math.abs(sw.tp2-sw.entry)/sw.entry)*100).toFixed(2);
+
+  return `
+    <div class="sweep-card${sw.fresh?' new-alert':''}">
+      <div class="sc-hdr">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="sc-type" style="color:${col};border-color:${col}44;background:${col}0d">${sw.type}</span>
+          ${sw.fresh?`<span style="color:var(--cyan);font-size:9px;letter-spacing:2px">⚡ FRESH</span>`:''}
+          ${sw.touches?`<span style="color:var(--text2);font-size:9px">${sw.touches}× tested</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="sc-dir" style="color:${dirCol}">${dirSymbol}</span>
+          <span class="sc-time">${sw.barTime}</span>
+        </div>
+      </div>
+      <div class="sc-body">
+        <div class="sc-grid">
+          <div class="sc-stat">
+            <div class="sc-stat-l">ENTRY</div>
+            <div class="sc-stat-v" style="color:var(--amber)">$${sw.entry.toFixed(2)}</div>
+            <div class="sc-stat-s">Next candle open</div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-stat-l">STOP LOSS</div>
+            <div class="sc-stat-v" style="color:var(--red)">$${sw.sl.toFixed(2)}</div>
+            <div class="sc-stat-s">-${slPct}% risk</div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-stat-l">TP1 · TP2</div>
+            <div class="sc-stat-v" style="color:var(--green);font-size:11px">$${sw.tp1.toFixed(2)} · $${sw.tp2.toFixed(2)}</div>
+            <div class="sc-stat-s">+${tp1Pct}% · +${tp2Pct}%</div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-stat-l">RISK / REWARD</div>
+            <div class="sc-stat-v" style="color:${parseFloat(sw.rr)>=2?'var(--green)':parseFloat(sw.rr)>=1.5?'var(--amber)':'var(--red)'}">1:${sw.rr}</div>
+            <div class="sc-stat-s">${parseFloat(sw.rr)>=2?'Strong setup':'Marginal R:R'}</div>
+          </div>
+        </div>
+        <div class="sc-desc">${sw.desc}</div>
+        <div style="margin-top:22px;margin-bottom:8px">${barHtml}</div>
+      </div>
+    </div>`;
+}
+
+function typeColor(type){
+  if(type==='STOP HUNT') return 'var(--red)';
+  if(type==='EQUAL H/L') return 'var(--amber)';
+  if(type==='ORDER BLOCK') return 'var(--purple)';
+  return 'var(--cyan)';
+}
+
+// ── TABS ──
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.content-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById(`pane-${name}`).classList.add('active');
+}
+
+// ── HISTORY ──
+function renderHistory(){
+  const tbody=document.getElementById('history-body');
+  if(!alertHistory.length){
+    tbody.innerHTML='<tr><td colspan="10" style="color:var(--text2);padding:20px 10px;font-size:10px;">No alerts yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML=alertHistory.slice(0,100).map(a=>{
+    const col=typeColor(a.type);
+    const dirCol=a.dir==='BULL'?'var(--green)':'var(--red)';
+    return `<tr>
+      <td style="color:var(--text2)">${a.time}</td>
+      <td style="font-family:'Syne Mono',monospace;color:var(--bright)">$${a.ticker}</td>
+      <td><span style="color:${col};font-size:9px;padding:2px 6px;border:1px solid ${col}44;background:${col}0d">${a.type}</span></td>
+      <td style="color:${dirCol};font-weight:500">${a.dir==='BULL'?'▲ LONG':'▼ SHORT'}</td>
+      <td>$${parseFloat(a.sweepPrice).toFixed(2)}</td>
+      <td style="color:var(--amber)">$${parseFloat(a.entry).toFixed(2)}</td>
+      <td style="color:var(--red)">$${parseFloat(a.sl).toFixed(2)}</td>
+      <td style="color:var(--green)">$${parseFloat(a.tp1).toFixed(2)}</td>
+      <td style="color:rgba(0,230,118,0.6)">$${parseFloat(a.tp2).toFixed(2)}</td>
+      <td style="color:${parseFloat(a.rr)>=2?'var(--green)':parseFloat(a.rr)>=1.5?'var(--amber)':'var(--red)'}">1:${a.rr}</td>
+    </tr>`;
+  }).join('');
+}
+function clearHistory(){
+  alertHistory=[];
+  localStorage.removeItem('sw_history');
+  renderHistory();
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+</script>
+</body>
+</html>
